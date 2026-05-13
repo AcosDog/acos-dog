@@ -1151,6 +1151,145 @@
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--borda); border-radius: 10px; }
+
+  /* ===== VIEW ESTOQUE ===== */
+  .estoque-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+  }
+  .estoque-categ {
+    margin-bottom: 16px;
+  }
+  .estoque-categ-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, var(--vermelho-escuro), var(--vermelho));
+    color: var(--amarelo);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 15px;
+    letter-spacing: 1.5px;
+    padding: 7px 12px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+  }
+  .estoque-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: white;
+    border: 1.5px solid var(--borda);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 7px;
+    transition: all 0.2s;
+  }
+  .estoque-item.indisponivel {
+    background: #fafafa;
+    border-color: #e0e0e0;
+    opacity: 0.6;
+  }
+  .estoque-item-info { flex: 1; }
+  .estoque-item-nome {
+    font-weight: 800;
+    font-size: 13px;
+    color: var(--vermelho);
+    line-height: 1.2;
+  }
+  .estoque-item.indisponivel .estoque-item-nome {
+    color: var(--cinza);
+    text-decoration: line-through;
+  }
+  .estoque-item-preco {
+    font-size: 11px;
+    color: var(--laranja);
+    font-weight: 700;
+    margin-top: 2px;
+  }
+  .estoque-item.indisponivel .estoque-item-preco { color: #aaa; }
+
+  /* Toggle switch */
+  .toggle-wrap { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .toggle-label { font-size: 11px; font-weight: 700; color: var(--cinza); }
+  .toggle-label.on { color: var(--verde); }
+  .toggle {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: #ccc;
+    border-radius: 24px;
+    cursor: pointer;
+    transition: 0.25s;
+  }
+  .toggle-slider:before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    left: 3px;
+    top: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: 0.25s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  }
+  .toggle input:checked + .toggle-slider { background: var(--verde); }
+  .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+  .estoque-topo {
+    background: var(--creme2);
+    border-bottom: 1px solid var(--borda);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .estoque-topo-info {
+    font-size: 12px;
+    color: var(--cinza);
+    font-weight: 600;
+  }
+  .estoque-topo-info strong { color: var(--vermelho); }
+  .btn-tudo-disponivel {
+    padding: 7px 14px;
+    background: var(--verde);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  /* item-card indisponivel no cardapio */
+  .item-card.indisponivel {
+    opacity: 0.5;
+    pointer-events: none;
+    position: relative;
+  }
+  .item-card.indisponivel::after {
+    content: 'INDISPONÍVEL';
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 800;
+    color: #888;
+    letter-spacing: 1px;
+    border-radius: 10px;
+  }
 </style>
 </head>
 <body>
@@ -1320,6 +1459,17 @@
     </div>
   </div>
 
+  <!-- VIEW: ESTOQUE -->
+  <div class="view" id="view-estoque">
+    <div class="estoque-topo">
+      <div class="estoque-topo-info" id="estoque-resumo">Todos disponíveis ✅</div>
+      <button class="btn-tudo-disponivel" onclick="reativarTudo()">✅ Tudo disponível</button>
+    </div>
+    <div class="estoque-scroll" id="estoque-scroll">
+      <!-- preenchido por JS -->
+    </div>
+  </div>
+
 </div><!-- /main-area -->
 
 <!-- MODAL: FECHADO (fora do horário) -->
@@ -1398,6 +1548,12 @@ style="display:none">
     <span class="nav-icon">📊</span>
     Relatório
   </div>
+  <div class="nav-tab" id="tab-estoque"
+onclick="trocarView('estoque'); renderEstoque()"
+style="display:none">
+    <span class="nav-icon">📦</span>
+    Estoque
+  </div>
 </nav>
 
 <div class="toast" id="toast"></div>
@@ -1439,8 +1595,11 @@ const cardapio = {
     { nome: "Aco's Barbecue", preco: 28, desc: "Pão, duas salsichas, purê, molho, milho, catchup, maionese, mostarda, batata palha e molho barbecue" },
   ],
   "Bebidas": [
-    { nome: "Refrigerante Lata", preco: 8, desc: "Lata 350ml — Consulte sabores disponíveis" },
-    { nome: "Água sem gás", preco: 4, desc: "Garrafa 500ml" },
+    { nome: "Coca-Cola", preco: 8, desc: "Lata 350ml", bebida: true },
+    { nome: "Coca-Cola Zero", preco: 8, desc: "Lata 350ml", bebida: true },
+    { nome: "Guaraná Antarctica", preco: 8, desc: "Lata 350ml", bebida: true },
+    { nome: "Guaraná Zero", preco: 8, desc: "Lata 350ml", bebida: true },
+    { nome: "Água sem gás", preco: 4, desc: "Garrafa 500ml", bebida: true },
   ]
 };
 
@@ -1493,6 +1652,7 @@ let filaGlobal = [];
 let totalDia = 0;
 let countPedidosDia = 0;
 let viewAtiva = "cardapio";
+let itensIndisponiveis = new Set(JSON.parse(localStorage.getItem('itensIndisponiveis') || '[]'));
 
 // ===== CONFIG =====
 const WHATSAPP_NUMERO = '551993179455'; // TROQUE PELO SEU NÚMERO
@@ -1501,6 +1661,7 @@ const WHATSAPP_NUMERO = '551993179455'; // TROQUE PELO SEU NÚMERO
 document.addEventListener('DOMContentLoaded', () => {
   carregarEstado();
   renderCardapio();
+  sincronizarEstoque();   // carrega estoque da planilha ao abrir
   atualizarRelogio();
   setInterval(atualizarRelogio, 1000);
   atualizarPedidoNum();
@@ -1731,8 +1892,9 @@ async function removerFilaPlanilha(id) {
 
 function iniciarSyncAdmin() {
   if (_syncInterval) return;
-  buscarFilaDaPlanilha();                   // imediato
-  _syncInterval = setInterval(buscarFilaDaPlanilha, 10000); // a cada 10s
+  buscarFilaDaPlanilha();
+  sincronizarEstoque();
+  _syncInterval = setInterval(buscarFilaDaPlanilha, 10000);
   mostrarToast('🔄 Fila sincronizada com a planilha');
 }
 
@@ -1778,7 +1940,8 @@ function renderCardapio() {
     grid.className = 'categ-items-grid';
     itens.forEach(item => {
       const card = document.createElement('div');
-      card.className = 'item-card';
+      card.className = 'item-card' + (itensIndisponiveis.has(item.nome) ? ' indisponivel' : '');
+      card.dataset.nome = item.nome;
       card.innerHTML = `
         ${item.destaque ? `<div class="item-badge">${item.destaque}</div>` : ''}
         <div class="item-nome">${item.nome}</div>
@@ -1817,6 +1980,26 @@ function comboPrecisaSabor(item) {
 }
 
 function abrirModal(item) {
+  // Bebidas: adicionar direto sem modal de adicionais
+  if (item.bebida) {
+    pedidoAtual.push({
+      nome: item.nome,
+      preco: item.preco,
+      qtd: 1,
+      obs: '',
+      obsPerDog: null,
+      sabores: null,
+      adicionais: [],
+      isCombo: false,
+      nDogs: 1
+    });
+    recalcularAdicionais();
+    renderPedido();
+    atualizarCartBadge();
+    mostrarToast(`🥤 ${item.nome} adicionado!`);
+    return;
+  }
+
   modalItemAtual    = item;
   modalAdicionaisQtd = {};
   modalDogAtivo     = 0;
@@ -2731,6 +2914,7 @@ function pedirSenhaAdmin() {
   if (senha === SENHA_ADMIN) {
     document.getElementById('tab-fila').style.display = 'flex';
     document.getElementById('tab-relatorio').style.display = 'flex';
+    document.getElementById('tab-estoque').style.display = 'flex';
     trocarView('fila');
     mostrarToast('✅ Admin liberado — sincronizando fila...');
     iniciarSyncAdmin();   // busca planilha imediatamente e a cada 10s
@@ -2739,6 +2923,105 @@ function pedirSenhaAdmin() {
   }
 }
 
+// ===== ESTOQUE =====
+function salvarEstoque() {
+  localStorage.setItem('itensIndisponiveis', JSON.stringify([...itensIndisponiveis]));
+}
+
+// Busca estoque da planilha (clientes + admin ao abrir)
+async function sincronizarEstoque() {
+  try {
+    const dados = await jsonpGet(GS_URL + '?acao=estoque');
+    if (!Array.isArray(dados)) return;
+    itensIndisponiveis = new Set(
+      dados.filter(d => d.disponivel === false || d.disponivel === 'false').map(d => d.nome)
+    );
+    salvarEstoque();
+    atualizarCardapioComEstoque();
+    if (document.getElementById('view-estoque').classList.contains('ativa')) renderEstoque();
+  } catch(e) {
+    console.warn('Estoque: usando cache local', e);
+  }
+}
+
+// Salva mudança de um item na planilha
+async function salvarEstoquePlanilha(nomeItem, disponivel) {
+  try {
+    await jsonpGet(GS_URL + '?acao=setEstoque&nome=' + encodeURIComponent(nomeItem) + '&disponivel=' + disponivel);
+  } catch(e) { console.warn('Erro ao salvar estoque na planilha:', e); }
+}
+
+function toggleDisponibilidade(nomeItem, disponivel) {
+  if (disponivel) {
+    itensIndisponiveis.delete(nomeItem);
+  } else {
+    itensIndisponiveis.add(nomeItem);
+  }
+  salvarEstoque();
+  salvarEstoquePlanilha(nomeItem, disponivel);
+  atualizarCardapioComEstoque();
+  atualizarResumoEstoque();
+}
+
+function reativarTudo() {
+  [...itensIndisponiveis].forEach(nome => salvarEstoquePlanilha(nome, true));
+  itensIndisponiveis.clear();
+  salvarEstoque();
+  renderEstoque();
+  atualizarCardapioComEstoque();
+  mostrarToast('✅ Todos os itens reativados!');
+}
+
+function atualizarCardapioComEstoque() {
+  document.querySelectorAll('.item-card').forEach(card => {
+    const nome = card.dataset.nome;
+    if (nome) {
+      if (itensIndisponiveis.has(nome)) {
+        card.classList.add('indisponivel');
+      } else {
+        card.classList.remove('indisponivel');
+      }
+    }
+  });
+}
+
+function atualizarResumoEstoque() {
+  const total = itensIndisponiveis.size;
+  const el = document.getElementById('estoque-resumo');
+  if (!el) return;
+  el.innerHTML = total === 0
+    ? 'Todos disponíveis ✅'
+    : `<strong>${total}</strong> item(s) indisponível(is) ⚠️`;
+}
+
+function renderEstoque() {
+  const container = document.getElementById('estoque-scroll');
+  if (!container) return;
+  let html = '';
+  for (const [categ, itens] of Object.entries(cardapio)) {
+    html += `<div class="estoque-categ"><div class="estoque-categ-header">🏷️ ${categ}</div>`;
+    itens.forEach(item => {
+      const indisponivel = itensIndisponiveis.has(item.nome);
+      html += `
+      <div class="estoque-item ${indisponivel ? 'indisponivel' : ''}">
+        <div class="estoque-item-info">
+          <div class="estoque-item-nome">${item.nome}</div>
+          <div class="estoque-item-preco">R$ ${item.preco.toFixed(2).replace('.',',')}</div>
+        </div>
+        <div class="toggle-wrap">
+          <span class="toggle-label ${!indisponivel ? 'on' : ''}">${!indisponivel ? 'Disponível' : 'Indisponível'}</span>
+          <label class="toggle">
+            <input type="checkbox" ${!indisponivel ? 'checked' : ''}
+              onchange="toggleDisponibilidade('${item.nome.replace(/'/g,"\\'")}', this.checked); renderEstoque()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+  container.innerHTML = html;
+  atualizarResumoEstoque();
+}
+
 </script>
-</body>
-</html>
