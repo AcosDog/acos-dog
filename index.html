@@ -2889,37 +2889,41 @@ ${pagamentoTexto}
 
 // ===== ADMIN =====
 
-const SENHA_ADMIN = '1234';
+const GS_TOKEN = 'Iasmim290821';
 
 let adminClicks = 0;
+let sessionToken = null; // token temporário gerado pelo script após login
 
 function abrirAdminSecreto() {
-
   adminClicks++;
-
   if (adminClicks >= 5) {
-
     adminClicks = 0;
-
     pedirSenhaAdmin();
   }
-
-  setTimeout(() => {
-    adminClicks = 0;
-  }, 2000);
+  setTimeout(() => { adminClicks = 0; }, 2000);
 }
 
-function pedirSenhaAdmin() {
+async function pedirSenhaAdmin() {
   const senha = prompt('🔒 Área administrativa — Digite a senha:');
-  if (senha === SENHA_ADMIN) {
-    document.getElementById('tab-fila').style.display = 'flex';
-    document.getElementById('tab-relatorio').style.display = 'flex';
-    document.getElementById('tab-estoque').style.display = 'flex';
-    trocarView('fila');
-    mostrarToast('✅ Admin liberado — sincronizando fila...');
-    iniciarSyncAdmin();   // busca planilha imediatamente e a cada 10s
-  } else if (senha !== null) {
-    mostrarToast('Senha incorreta', 'erro');
+  if (!senha) return;
+
+  mostrarToast('Verificando...', 'info');
+
+  try {
+    const res = await jsonpGet(GS_URL + '?acao=login&senha=' + encodeURIComponent(senha));
+    if (res && res.ok && res.token) {
+      sessionToken = res.token;
+      document.getElementById('tab-fila').style.display = 'flex';
+      document.getElementById('tab-relatorio').style.display = 'flex';
+      document.getElementById('tab-estoque').style.display = 'flex';
+      trocarView('fila');
+      mostrarToast('✅ Admin liberado — sincronizando fila...');
+      iniciarSyncAdmin();
+    } else {
+      mostrarToast('Senha incorreta', 'erro');
+    }
+  } catch(e) {
+    mostrarToast('Erro ao verificar senha', 'erro');
   }
 }
 
@@ -2947,7 +2951,7 @@ async function sincronizarEstoque() {
 // Salva mudança de um item na planilha
 async function salvarEstoquePlanilha(nomeItem, disponivel) {
   try {
-    await jsonpGet(GS_URL + '?acao=setEstoque&nome=' + encodeURIComponent(nomeItem) + '&disponivel=' + disponivel);
+    await jsonpGet(GS_URL + '?acao=setEstoque&token=' + encodeURIComponent(sessionToken || '') + '&nome=' + encodeURIComponent(nomeItem) + '&disponivel=' + disponivel);
   } catch(e) { console.warn('Erro ao salvar estoque na planilha:', e); }
 }
 
