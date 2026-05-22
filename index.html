@@ -2499,16 +2499,50 @@ function imprimirFilaPedido(id) {
 function imprimirArea() {
   const area = document.getElementById('print-area');
   area.style.display = 'block';
-  const w = window.open('', '_blank', 'width=320,height=600');
+  const w = window.open('', '_blank', 'width=380,height=700');
   if (!w) { area.style.display = 'none'; mostrarToast('Permita popups para imprimir', 'erro'); return; }
-  w.document.write('<html><head><title>Aco\'s Dog</title>');
-  w.document.write('<style>body{font-family:Courier New,monospace;font-size:11px;width:80mm;padding:4mm}.p-center{text-align:center}.p-bold{font-weight:bold}.p-linha{border-top:1px dashed black;margin:4px 0}.p-row{display:flex;justify-content:space-between}</style>');
-  w.document.write('</head><body>');
+  w.document.write(`<html><head><title>Aco's Dog</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    width: 80mm;
+    max-width: 80mm;
+    padding: 6mm 4mm;
+    color: #000;
+    background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .p-center { text-align: center; }
+  .p-bold { font-weight: bold; }
+  .p-linha {
+    border: none;
+    border-top: 2px dashed #000;
+    margin: 6px 0;
+  }
+  .p-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 1px 0;
+  }
+  .p-row span:first-child { flex: 1; }
+  .p-row span:last-child { text-align: right; white-space: nowrap; }
+  @media print {
+    body { width: 80mm; padding: 4mm 3mm; }
+    @page { margin: 0; size: 80mm auto; }
+  }
+</style>
+</head><body>`);
   w.document.write(area.innerHTML);
   w.document.write('</body></html>');
   w.document.close();
   w.focus();
-  setTimeout(() => { w.print(); w.close(); }, 500);
+  setTimeout(() => { w.print(); w.close(); }, 600);
   area.style.display = 'none';
 }
 
