@@ -1718,40 +1718,55 @@ function salvarEstado() {
 
 async function enviarPedidoParaPlanilha(pedido) {
   const itensTexto = pedido.itens.map(i => `${i.qtd}x ${i.nome}`).join(' | ');
-  const addTexto   = pedido.itens.map(i => {
+
+  const addTexto = pedido.itens.map(i => {
     if (!i.adicionais || i.adicionais.length === 0) return '';
+
     if (i.isCombo && Array.isArray(i.adicionais)) {
-      return i.adicionais.map((dog, di) =>
-        Array.isArray(dog) && dog.length > 0
-          ? `Dog${di+1}: ${dog.map(a => (a.qtd>1?a.qtd+'x ':'')+a.nome).join(', ')}`
-          : ''
-      ).filter(Boolean).join(' / ');
+      // i.adicionais = [ [{nome,qtd},...], [{nome,qtd},...] ]
+      const partesDogs = i.adicionais.map((dog, di) => {
+        const lista = Array.isArray(dog) ? dog : [];
+        if (lista.length === 0) return '';
+        const nomes = lista
+          .filter(a => a && a.nome)
+          .map(a => (a.qtd > 1 ? a.qtd + 'x ' : '') + a.nome)
+          .join(', ');
+        return nomes ? `Dog${di+1}: ${nomes}` : '';
+      }).filter(Boolean);
+      return partesDogs.join(' / ');
     }
-    return i.adicionais.map(a => (a.qtd>1?a.qtd+'x ':'')+a.nome).join(', ');
+
+    // Item simples: i.adicionais = [{nome,qtd},...]
+    const nomes = i.adicionais
+      .filter(a => a && a.nome)
+      .map(a => (a.qtd > 1 ? a.qtd + 'x ' : '') + a.nome)
+      .join(', ');
+    return nomes;
+
   }).filter(Boolean).join(' | ');
 
   const payload = {
-    id:        pedido.id,
-    hora:      pedido.hora,
-    cliente:   pedido.cliente,
-    tipo:      pedido.tipo,
-    endereco:  pedido.endereco || '',
-    itens:     itensTexto,
+    id:         pedido.id,
+    hora:       pedido.hora,
+    cliente:    pedido.cliente,
+    tipo:       pedido.tipo,
+    endereco:   pedido.endereco || '',
+    itens:      itensTexto,
     adicionais: addTexto,
-    pagamento: pedido.pagamento || '',
-    total:     pedido.total
+    pagamento:  pedido.pagamento || '',
+    total:      pedido.total
   };
 
   try {
     await fetch(GS_URL, {
-      method: 'POST',
-      mode:   'no-cors',
+      method:  'POST',
+      mode:    'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body:    JSON.stringify(payload)
     });
   } catch(e) {}
 }
-
+  
 let _syncInterval  = null;
 let _ultimoIdVisto = null;
 
