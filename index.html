@@ -2359,21 +2359,44 @@ function confirmarPedido() {
 function gerarImpressaoComanda(pedido) {
   const tipoLabel = { local: 'Local', delivery: 'Delivery', retirada: 'Retirada' };
 
+  // Helper robusto: normaliza adicionais vindos de qualquer formato
+  function normalizarAdicionais(raw) {
+    if (!raw || raw.length === 0) return [];
+    // Array de objetos {nome, qtd}
+    if (typeof raw[0] === 'object' && raw[0] !== null && raw[0].nome) return raw;
+    // Array de strings
+    if (typeof raw[0] === 'string') return raw.map(s => ({ nome: s, qtd: 1 }));
+    return [];
+  }
+
+  function formatarAdicionais(lista) {
+    const norm = normalizarAdicionais(lista);
+    if (norm.length === 0) return '';
+    return norm.map(a => (a.qtd > 1 ? a.qtd + 'x ' : '') + a.nome).join(', ');
+  }
+
   const linhaItens = pedido.itens.map(i => {
     let linha = `<div class="p-row"><span>${i.qtd}x ${i.nome}</span><span>R$${(i.preco * i.qtd).toFixed(2)}</span></div>`;
-    if (i.obs) linha += `<div style="font-size:12px;padding-left:12px;margin-bottom:2px">  Obs: ${i.obs}</div>`;
+
+    if (i.obs) {
+      linha += `<div style="font-size:12px;padding-left:12px">  Obs: ${i.obs}</div>`;
+    }
+
     if (i.isCombo && Array.isArray(i.adicionais)) {
       i.adicionais.forEach((dog, di) => {
         const s = i.sabores && i.sabores[di] ? i.sabores[di] : '';
-        const a = Array.isArray(dog) && dog.length > 0 ? dog.map(x => x.nome).join(', ') : '';
+        const a = formatarAdicionais(dog);
         const o = i.obsPerDog && i.obsPerDog[di] ? i.obsPerDog[di] : '';
-        const partes = [s, a, o].filter(Boolean).join(' / ');
+        const partes = [s, a ? '+ ' + a : '', o].filter(Boolean).join(' / ');
         if (partes) linha += `<div style="font-size:12px;padding-left:12px">  Dog${di+1}: ${partes}</div>`;
       });
-    } else if (Array.isArray(i.adicionais) && i.adicionais.length > 0) {
-      const adds = i.adicionais.map(a => (a.qtd > 1 ? a.qtd + 'x ' : '') + a.nome).join(', ');
-      linha += `<div style="font-size:12px;padding-left:12px">  + ${adds}</div>`;
+    } else {
+      const adds = formatarAdicionais(i.adicionais);
+      if (adds) {
+        linha += `<div style="font-size:12px;padding-left:12px">  + ${adds}</div>`;
+      }
     }
+
     return linha;
   }).join('');
 
