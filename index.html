@@ -1109,10 +1109,10 @@
   /* ===== PRINT — CORRIGIDO ===== */
   #print-area {
     display: none;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 14px;
-    line-height: 1.6;
-    width: 80mm;
+    ffont-family: Arial, Helvetica, sans-serif;
+    font-size: 18px;
+    line-height: 1.9;
+    width: 72mm;
     padding: 4mm;
     color: #000;
     background: #fff;
@@ -2421,27 +2421,30 @@ function imprimirArea() {
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 14px;
-    line-height: 1.6;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 18px;
+     font-weight: bold;
+    line-height: 1.9;
     color: #000;
     background: #fff;
-    width: 80mm;
-    padding: 4mm;
+    width: 72mm;
+    padding: 3mm 2mm;
   }
   .p-center { text-align: center; }
   .p-bold { font-weight: bold; }
-  .p-linha { border-top: 2px dashed #000; margin: 6px 0; }
+  .p-linha { border-top: 2px solid #000; margin: 5px 0; }
   .p-row {
     display: flex;
     justify-content: space-between;
-    margin: 2px 0;
+    margin: 3px 0;
     word-break: break-word;
+    gap: 8px;
   }
+  p-row span:last-child { white-space: nowrap; }
   @media print {
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     @page { margin: 0; size: 80mm auto; }
-    body { width: 80mm !important; }
+    body { width: 72mm !important; }
   }
 </style>
 </head>
