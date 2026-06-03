@@ -1106,10 +1106,9 @@
   .toast.show { transform: translateX(-50%) translateY(0); }
   .toast.erro { background: #c0392b; }
 
-  /* ===== PRINT — CORRIGIDO ===== */
   #print-area {
     display: none;
-    ffont-family: Arial, Helvetica, sans-serif;
+    font-family: Arial, Helvetica, sans-serif;
     font-size: 16px;
     line-height: 1.7;
     width: 72mm;
@@ -1577,6 +1576,14 @@ const cardapio = {
 
 const adicionais = ["+1 salsicha", "4 queijos", "Alho Frito", "Bacon", "Barbecue", "Catupiry", "Cebola Crispy", "Cheddar", "Cream Cheese", "Doritos", "Queijo Gratinado"];
 
+// ============================================================
+// CORRECAO: helper para formatar hora sem fuso/locale
+// ============================================================
+function horaAgora() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+
 function tocarSomPedido() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1723,7 +1730,6 @@ async function enviarPedidoParaPlanilha(pedido) {
     if (!i.adicionais || i.adicionais.length === 0) return '';
 
     if (i.isCombo && Array.isArray(i.adicionais)) {
-      // i.adicionais = [ [{nome,qtd},...], [{nome,qtd},...] ]
       const partesDogs = i.adicionais.map((dog, di) => {
         const lista = Array.isArray(dog) ? dog : [];
         if (lista.length === 0) return '';
@@ -1736,7 +1742,6 @@ async function enviarPedidoParaPlanilha(pedido) {
       return partesDogs.join(' / ');
     }
 
-    // Item simples: i.adicionais = [{nome,qtd},...]
     const nomes = i.adicionais
       .filter(a => a && a.nome)
       .map(a => (a.qtd > 1 ? a.qtd + 'x ' : '') + a.nome)
@@ -1868,9 +1873,7 @@ function hoje() {
 }
 
 function atualizarRelogio() {
-  const agora = new Date();
-  document.getElementById('relogio').textContent =
-    String(agora.getHours()).padStart(2,'0') + ':' + String(agora.getMinutes()).padStart(2,'0');
+  document.getElementById('relogio').textContent = horaAgora();
 }
 
 function atualizarHeaderStats() {
@@ -2330,13 +2333,14 @@ function confirmarPedido() {
     endereco = getEnderecoDelivery();
     if (!endereco) { mostrarToast('Preencha o endereco de entrega!', 'erro'); return; }
     const agora = new Date();
-    const fmt = d => d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const fmt = d => String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
     previsao = `${fmt(new Date(agora.getTime() + 60*60000))} ~ ${fmt(new Date(agora.getTime() + 90*60000))}`;
   }
 
   recalcularAdicionais();
   const total = pedidoAtual.reduce((s, i) => s + precoItem(i), 0);
-  const hora  = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  // CORRECAO: usar horaAgora() em vez de toLocaleTimeString para evitar "BRT" no iOS
+  const hora  = horaAgora();
   const idPedido = hoje() + '-' + Date.now();
 
   const formaPagamento = document.getElementById('forma-pagamento').value;
@@ -2370,34 +2374,40 @@ function confirmarPedido() {
   mostrarToast(`🎉 Pedido #${pedido.num} confirmado!`);
 }
 
-// ===== IMPRESSÃO CORRIGIDA =====
+// ============================================================
+// CORRECAO: gerarImpressaoComanda — adicionais e hora corrigidos
+// ============================================================
 function gerarImpressaoComanda(pedido) {
   const tipoLabel = { local: 'Local', delivery: 'Delivery', retirada: 'Retirada' };
 
-  // Helper robusto: normaliza adicionais vindos de qualquer formato
+  // Normaliza adicionais vindos de qualquer formato: [{nome,qtd}], ['string'], ou vazio
   function normalizarAdicionais(raw) {
-    if (!raw || raw.length === 0) return [];
-    // Array de objetos {nome, qtd}
-    if (typeof raw[0] === 'object' && raw[0] !== null && raw[0].nome) return raw;
-    // Array de strings
-    if (typeof raw[0] === 'string') return raw.map(s => ({ nome: s, qtd: 1 }));
+    if (!raw || !Array.isArray(raw) || raw.length === 0) return [];
+    const primeiro = raw[0];
+    if (!primeiro) return [];
+    if (typeof primeiro === 'object' && typeof primeiro.nome === 'string') return raw;
+    if (typeof primeiro === 'string') return raw.map(s => ({ nome: s, qtd: 1 }));
     return [];
   }
 
   function formatarAdicionais(lista) {
-    const norm = normalizarAdicionais(lista);
-    if (norm.length === 0) return '';
-    return norm.map(a => (a.qtd > 1 ? a.qtd + 'x ' : '') + a.nome).join(', ');
+    try {
+      const norm = normalizarAdicionais(lista);
+      if (norm.length === 0) return '';
+      return norm.map(a => (a.qtd > 1 ? a.qtd + 'x ' : '') + a.nome).join(', ');
+    } catch(e) { return ''; }
   }
 
   const linhaItens = pedido.itens.map(i => {
     let linha = `<div class="p-row"><span>${i.qtd}x ${i.nome}</span><span>R$${(i.preco * i.qtd).toFixed(2)}</span></div>`;
 
+    // Observacao do item simples
     if (i.obs) {
       linha += `<div style="font-size:12px;padding-left:12px">  Obs: ${i.obs}</div>`;
     }
 
     if (i.isCombo && Array.isArray(i.adicionais)) {
+      // Combo com dogs individuais
       i.adicionais.forEach((dog, di) => {
         const s = i.sabores && i.sabores[di] ? i.sabores[di] : '';
         const a = formatarAdicionais(dog);
@@ -2406,6 +2416,7 @@ function gerarImpressaoComanda(pedido) {
         if (partes) linha += `<div style="font-size:12px;padding-left:12px">  Dog${di+1}: ${partes}</div>`;
       });
     } else {
+      // Item simples — imprimir adicionais se houver
       const adds = formatarAdicionais(i.adicionais);
       if (adds) {
         linha += `<div style="font-size:12px;padding-left:12px">  + ${adds}</div>`;
@@ -2461,7 +2472,7 @@ function imprimirArea() {
   body {
     font-family: Arial, Helvetica, sans-serif;
     font-size: 18px;
-     font-weight: bold;
+    font-weight: bold;
     line-height: 1.9;
     color: #000;
     background: #fff;
@@ -2478,7 +2489,7 @@ function imprimirArea() {
     word-break: break-word;
     gap: 8px;
   }
-  p-row span:last-child { white-space: nowrap; }
+  .p-row span:last-child { white-space: nowrap; }
   @media print {
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     @page { margin: 0; size: 80mm auto; }
@@ -2507,7 +2518,6 @@ function imprimirArea() {
     }, 300);
   };
 
-  // fallback caso onload nao dispare
   setTimeout(() => {
     if (w && !w.closed) {
       w.focus();
@@ -2521,7 +2531,8 @@ function imprimirComanda() {
   const cliente = document.getElementById('campo-cliente').value.trim() || 'Cliente';
   const tipo = tipoAtual;
   const total = pedidoAtual.reduce((s, i) => s + precoItem(i), 0);
-  const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  // CORRECAO: usar horaAgora() em vez de toLocaleTimeString
+  const hora = horaAgora();
   gerarImpressaoComanda({ num: numeroPedido, cliente, tipo, itens: pedidoAtual, total, hora });
   imprimirArea();
 }
@@ -2729,7 +2740,7 @@ function imprimirRelatorio() {
     <div class="p-linha"></div>
     ${pedidosHoje.map(p => `<div class="p-row"><span>#${String(p.num).padStart(3,'0')} ${p.cliente}</span><span>R$${p.total.toFixed(2)}</span></div>`).join('')}
     <div class="p-linha"></div>
-    <div class="p-center" style="font-size:12px">Aco's Dog — Relatorio ${new Date().toLocaleTimeString('pt-BR')}</div>
+    <div class="p-center" style="font-size:12px">Aco's Dog — Relatorio ${horaAgora()}</div>
     <br><br><br>
   `;
   imprimirArea();
@@ -2816,7 +2827,8 @@ function enviarWhatsApp() {
   });
 
   mensagem += `\n\n━━━━━━━━━━━━━━\n💵 *TOTAL: R$ ${total.toFixed(2)}*\n━━━━━━━━━━━━━━\n`;
-  mensagem += `\n⏰ Pedido realizado as ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}\n`;
+  // CORRECAO: usar horaAgora() em vez de toLocaleTimeString
+  mensagem += `\n⏰ Pedido realizado as ${horaAgora()}\n`;
 
   const link = `https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(mensagem)}`;
   window.open(link, '_blank');
