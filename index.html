@@ -190,6 +190,21 @@
   .delivery-row input:focus, .pagamento-bloco select:focus { outline: none; border-color: var(--laranja); }
   .delivery-previsao { font-size: 11px; font-weight: 700; color: var(--verde); background: var(--verde-claro); border-radius: 6px; padding: 4px 10px; margin-top: 4px; display: inline-block; }
 
+  /* Seletor de frete */
+  .frete-bloco { margin-top: 8px; }
+  .frete-label { font-size: 10px; font-weight: 800; color: var(--cinza); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+  .frete-btns { display: flex; gap: 6px; }
+  .frete-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px; border: 2px solid var(--borda); border-radius: 10px; background: white; cursor: pointer; transition: all 0.15s; -webkit-tap-highlight-color: transparent; user-select: none; }
+  .frete-btn .fb-icon { font-size: 18px; line-height: 1; }
+  .frete-btn .fb-label { font-size: 10px; font-weight: 800; color: var(--cinza); text-align: center; line-height: 1.2; }
+  .frete-btn .fb-val { font-size: 11px; font-weight: 800; color: var(--laranja); }
+  .frete-btn.ativo { border-color: var(--laranja); background: #fff4e8; }
+  .frete-btn.ativo .fb-label { color: var(--vermelho); }
+  .frete-input-wrap { margin-top: 6px; display: none; }
+  .frete-input-wrap.show { display: block; }
+  .frete-input-wrap input { border: 1.5px solid var(--borda); border-radius: 7px; padding: 7px 10px; font-family: 'Nunito', sans-serif; font-size: 13px; background: white; color: var(--texto); width: 100%; }
+  .frete-input-wrap input:focus { outline: none; border-color: var(--laranja); }
+
   .secao-itens-titulo { font-size: 11px; font-weight: 800; color: var(--cinza); text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 12px 4px; background: var(--creme); }
 
   #pedido-lista { padding: 6px 10px 10px; display: flex; flex-direction: column; gap: 6px; }
@@ -415,7 +430,31 @@
           <input type="text" id="del-ref" placeholder="Ponto de referencia (opcional)">
         </div>
         <span class="delivery-previsao" id="delivery-previsao">🕐 Previsão: calculando...</span>
-      </div>
+
+        <!-- Seletor de frete -->
+        <div class="frete-bloco">
+          <div class="frete-label">🛵 Cobrar frete?</div>
+          <div class="frete-btns">
+            <div class="frete-btn" id="frete-btn-sem" onclick="selecionarFrete('sem')">
+              <span class="fb-icon">🎁</span>
+              <span class="fb-label">Sem frete</span>
+              <span class="fb-val">Grátis</span>
+            </div>
+            <div class="frete-btn ativo" id="frete-btn-fixo" onclick="selecionarFrete('fixo')">
+              <span class="fb-icon">🛵</span>
+              <span class="fb-label">Frete fixo</span>
+              <span class="fb-val" id="frete-fixo-val">R$ 5,00</span>
+            </div>
+            <div class="frete-btn" id="frete-btn-custom" onclick="selecionarFrete('custom')">
+              <span class="fb-icon">✏️</span>
+              <span class="fb-label">Outro valor</span>
+              <span class="fb-val">R$ ?</span>
+            </div>
+          </div>
+          <div class="frete-input-wrap" id="frete-custom-wrap">
+            <input type="number" id="frete-custom-val" placeholder="Ex: 8,00" min="0" step="0.50" oninput="atualizarTotais()">
+          </div>
+        </div>
       <div class="pagamento-bloco" id="pagamento-campos">
         <div class="delivery-titulo">💳 Forma de Pagamento</div>
         <div class="delivery-row">
@@ -445,6 +484,7 @@
     <div class="pedido-totais">
       <div class="total-linha"><span>Subtotal</span><span id="subtotal">R$ 0,00</span></div>
       <div class="total-linha"><span>Itens</span><span id="qtd-itens">0 itens</span></div>
+      <div class="total-linha" id="frete-linha" style="display:none"><span>🛵 Frete</span><span id="frete-valor-display" style="color:var(--laranja);font-weight:800">R$ 0,00</span></div>
       <div class="total-final"><span>TOTAL</span><span id="total-pedido">R$ 0,00</span></div>
     </div>
     <div class="pedido-acoes">
@@ -655,7 +695,7 @@ let viewAtiva = "cardapio";
 let itensIndisponiveis = new Set(JSON.parse(localStorage.getItem('itensIndisponiveis') || '[]'));
 
 const WHATSAPP_NUMERO = '551993179455';
-const GS_URL = "https://script.google.com/macros/s/AKfycbxPPoNWoXY0KKuhXxjqzj_tjaSGa3R-U_fIzM2YdC4WI6581IUtGh3RzAPzYKCoUMet/exec";
+const GS_URL = "https://script.google.com/macros/s/AKfycby6HCmYRR5jCRzscPxjuW8OsCcLCgVmALK92LoELt4KrI8XZCYkFBYf9s8UchQff4cU/exec";
 
 document.addEventListener('DOMContentLoaded', () => {
   carregarEstado();
@@ -1091,11 +1131,23 @@ function precoItem(i) {
 
 function atualizarTotais() {
   recalcularAdicionais();
-  const total = pedidoAtual.reduce((s,i) => s+precoItem(i), 0);
-  const qtd = pedidoAtual.reduce((s,i) => s+i.qtd, 0);
-  document.getElementById('subtotal').textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+  const subtotal = pedidoAtual.reduce((s,i) => s+precoItem(i), 0);
+  const frete    = getValorFrete();
+  const total    = subtotal + frete;
+  const qtd      = pedidoAtual.reduce((s,i) => s+i.qtd, 0);
+  document.getElementById('subtotal').textContent     = 'R$ ' + subtotal.toFixed(2).replace('.', ',');
   document.getElementById('total-pedido').textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
-  document.getElementById('qtd-itens').textContent = qtd + (qtd === 1 ? ' item' : ' itens');
+  document.getElementById('qtd-itens').textContent    = qtd + (qtd === 1 ? ' item' : ' itens');
+  const freteLinha = document.getElementById('frete-linha');
+  const freteDisplay = document.getElementById('frete-valor-display');
+  if (freteLinha && freteDisplay) {
+    if (frete > 0) {
+      freteLinha.style.display = '';
+      freteDisplay.textContent = 'R$ ' + frete.toFixed(2).replace('.', ',');
+    } else {
+      freteLinha.style.display = 'none';
+    }
+  }
 }
 
 function limparPedido() {
@@ -1114,11 +1166,37 @@ function gerarCodigoPedido() {
 
 let tipoAtual = 'delivery';
 
+// ─── FRETE ───────────────────────────────────────────────────
+let freteMode = 'fixo';   // 'sem' | 'fixo' | 'custom'
+const FRETE_FIXO = 5;
+
+function selecionarFrete(mode) {
+  freteMode = mode;
+  ['sem','fixo','custom'].forEach(m => {
+    document.getElementById('frete-btn-' + m).classList.toggle('ativo', m === mode);
+  });
+  const customWrap = document.getElementById('frete-custom-wrap');
+  if (customWrap) customWrap.classList.toggle('show', mode === 'custom');
+  atualizarTotais();
+}
+
+function getValorFrete() {
+  if (tipoAtual !== 'delivery') return 0;
+  if (freteMode === 'sem')    return 0;
+  if (freteMode === 'fixo')   return FRETE_FIXO;
+  if (freteMode === 'custom') {
+    const v = parseFloat(document.getElementById('frete-custom-val')?.value || '0');
+    return isNaN(v) ? 0 : v;
+  }
+  return 0;
+}
+
 function selecionarTipo(tipo) {
   tipoAtual = tipo;
   ['local','delivery','retirada'].forEach(t => document.getElementById('tipo-'+t).classList.toggle('ativo', t===tipo));
   const bloco = document.getElementById('delivery-campos');
   if (tipo === 'delivery') { bloco.classList.add('show'); calcularPrevisao(); } else { bloco.classList.remove('show'); }
+  atualizarTotais();
 }
 
 function calcularPrevisao() {
@@ -1150,14 +1228,16 @@ function confirmarPedido() {
     previsao = `${fmt(new Date(agora.getTime()+60*60000))} ~ ${fmt(new Date(agora.getTime()+90*60000))}`;
   }
   recalcularAdicionais();
-  const total = pedidoAtual.reduce((s,i) => s+precoItem(i), 0);
+  const subtotal = pedidoAtual.reduce((s,i) => s+precoItem(i), 0);
+  const frete    = getValorFrete();
+  const total    = subtotal + frete;
   const hora = horaAgora();
   const formaPagamento = document.getElementById('forma-pagamento').value;
   const troco = document.getElementById('troco-para').value;
   const pgtoMap = { dinheiro:'Dinheiro'+(troco?` (troco p/ R$${troco})`:''), cartao:'Cartao', pix:'PIX', 'pix-maquina':'PIX Maquina' };
   const pedido = {
     id: hoje()+'-'+Date.now(), num: numeroPedido, cliente, tipo, endereco, previsao,
-    itens: [...pedidoAtual], total, hora, status: 'aguardando', data: hoje(),
+    itens: [...pedidoAtual], frete, total, hora, status: 'aguardando', data: hoje(),
     pagamento: pgtoMap[formaPagamento] || formaPagamento
   };
   filaGlobal.unshift(pedido);
@@ -1229,6 +1309,7 @@ function gerarImpressaoComanda(pedido) {
     <div class="p-bold" style="margin-bottom:4px">ITENS:</div>
     ${linhaItens}
     <div class="p-linha"></div>
+    ${pedido.frete > 0 ? `<div class="p-row"><span>🛵 Frete:</span><span>R$ ${pedido.frete.toFixed(2)}</span></div>` : ''}
     <div class="p-row p-bold" style="font-size:16px"><span>TOTAL:</span><span>R$ ${pedido.total.toFixed(2)}</span></div>
     <div class="p-linha"></div>
     <div class="p-center" style="font-size:12px;margin-top:4px">Obrigado pela preferencia!</div>
@@ -1441,6 +1522,7 @@ function enviarWhatsApp() {
   }
   recalcularAdicionais();
   let total = 0;
+  const frete = getValorFrete();
   const formaPagamento = document.getElementById('forma-pagamento').value;
   const troco = document.getElementById('troco-para').value;
   let pagamentoTexto = formaPagamento === 'dinheiro' ? (troco ? `💵 *Pagamento:* Dinheiro (Troco para R$ ${troco})` : `💵 *Pagamento:* Dinheiro`)
@@ -1468,7 +1550,9 @@ function enviarWhatsApp() {
     }
     mensagem += `\n   💰 R$ ${subtotal.toFixed(2)}`;
   });
-  mensagem += `\n\n━━━━━━━━━━━━━━\n💵 *TOTAL: R$ ${total.toFixed(2)}*\n━━━━━━━━━━━━━━\n`;
+  mensagem += `\n\n━━━━━━━━━━━━━━\n`;
+  if (frete > 0) mensagem += `🛵 *Frete: R$ ${frete.toFixed(2)}*\n`;
+  mensagem += `💵 *TOTAL: R$ ${(total + frete).toFixed(2)}*\n━━━━━━━━━━━━━━\n`;
   mensagem += `\n⏰ Pedido realizado as ${horaAgora()}\n`;
   window.open(`https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(mensagem)}`, '_blank');
   mostrarToast('Redirecionando para WhatsApp...');
