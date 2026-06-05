@@ -190,7 +190,6 @@
   .delivery-row input:focus, .pagamento-bloco select:focus { outline: none; border-color: var(--laranja); }
   .delivery-previsao { font-size: 11px; font-weight: 700; color: var(--verde); background: var(--verde-claro); border-radius: 6px; padding: 4px 10px; margin-top: 4px; display: inline-block; }
 
-  /* Seletor de frete */
   .frete-bloco { margin-top: 8px; }
   .frete-label { font-size: 10px; font-weight: 800; color: var(--cinza); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
   .frete-btns { display: flex; gap: 6px; }
@@ -323,7 +322,6 @@
   .item-card.indisponivel { opacity: 0.5; pointer-events: none; position: relative; }
   .item-card.indisponivel::after { content: 'INDISPONIVEL'; position: absolute; inset: 0; background: rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: #888; letter-spacing: 1px; border-radius: 10px; }
 
-  /* ── MODAL EDIÇÃO ── */
   .edit-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1500; align-items: flex-end; justify-content: center; }
   .edit-overlay.show { display: flex; }
   .edit-box { background: var(--creme); border-radius: 18px 18px 0 0; width: 100%; max-height: 90dvh; display: flex; flex-direction: column; overflow: hidden; animation: slideUp 0.22s ease; }
@@ -416,6 +414,7 @@
           <div class="tipo-btn" id="tipo-retirada" onclick="selecionarTipo('retirada')"><span class="tipo-icon">🥡</span><span class="tipo-text">Retirada</span></div>
         </div>
       </div>
+
       <div class="delivery-campos show" id="delivery-campos">
         <div class="delivery-titulo">🛵 Endereço de Entrega</div>
         <div class="delivery-row">
@@ -430,8 +429,6 @@
           <input type="text" id="del-ref" placeholder="Ponto de referencia (opcional)">
         </div>
         <span class="delivery-previsao" id="delivery-previsao">🕐 Previsão: calculando...</span>
-
-        <!-- Seletor de frete -->
         <div class="frete-bloco">
           <div class="frete-label">🛵 Cobrar frete?</div>
           <div class="frete-btns">
@@ -455,6 +452,8 @@
             <input type="number" id="frete-custom-val" placeholder="Ex: 8,00" min="0" step="0.50" oninput="atualizarTotais()">
           </div>
         </div>
+      </div><!-- ✅ FIM do delivery-campos — CORREÇÃO APLICADA AQUI -->
+
       <div class="pagamento-bloco" id="pagamento-campos">
         <div class="delivery-titulo">💳 Forma de Pagamento</div>
         <div class="delivery-row">
@@ -472,6 +471,7 @@
           📲 O PIX sera cobrado pelo QR Code na maquina.
         </div>
       </div>
+
       <div class="secao-itens-titulo">🌭 Itens do pedido</div>
       <div id="pedido-lista">
         <div class="pedido-vazio" id="pedido-vazio">
@@ -552,7 +552,6 @@
   </div>
 </div>
 
-<!-- MODAL EDIÇÃO DE PEDIDO -->
 <div class="edit-overlay" id="modal-edicao">
   <div class="edit-box">
     <div class="edit-header">
@@ -562,9 +561,7 @@
       </div>
       <button class="edit-close" onclick="fecharEdicao()">✕</button>
     </div>
-    <div class="edit-body" id="edit-body">
-      <!-- preenchido dinamicamente -->
-    </div>
+    <div class="edit-body" id="edit-body"></div>
     <div class="edit-footer">
       <button class="edit-btn-cancel" onclick="fecharEdicao()">Cancelar</button>
       <button class="edit-btn-save" onclick="salvarEdicao()">✅ Salvar Alterações</button>
@@ -628,27 +625,20 @@ const cardapio = {
 
 const adicionais = ["+1 salsicha", "4 queijos", "Alho Frito", "Bacon", "Barbecue", "Catupiry", "Cebola Crispy", "Cheddar", "Cream Cheese", "Doritos", "Queijo Gratinado"];
 
-// ─── HORA SEMPRE HH:MM, SEM FUSO ────────────────────────────
 function horaAgora() {
   const d = new Date();
   return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
 }
 
-// Garante que qualquer string de hora vinda da planilha fique só "HH:mm"
-// Ex: "21:30:00", "21:30 BRT", "Sat Dec 30 21:30:00 GMT-0300 1899" → "21:30"
 function sanitizarHora(raw) {
   if (!raw) return '';
   const s = String(raw).trim();
-  // Formato ideal: já é HH:mm
   if (/^\d{2}:\d{2}$/.test(s)) return s;
-  // Tem HH:mm em algum lugar da string
   const m = s.match(/(\d{1,2}):(\d{2})/);
   if (m) return String(m[1]).padStart(2,'0') + ':' + m[2];
   return s;
 }
 
-// ─── PARSER DE ADICIONAIS DA PLANILHA ───────────────────────
-// Reconstrói [{nome,qtd}] ou [[{nome,qtd}],[...]] a partir da string salva
 function parseAdicionaisSimples(str) {
   if (!str || !str.trim()) return [];
   return str.split(',').map(s => s.trim()).filter(Boolean).map(nome => {
@@ -660,7 +650,6 @@ function parseAdicionaisSimples(str) {
 function parseAdicionaisItem(str) {
   if (!str || !str.trim()) return [];
   if (/Dog\d+:/i.test(str)) {
-    // Combo: "Dog1: Bacon, Cheddar / Dog2: Catupiry"
     return str.split('/').map(s => {
       const partes = s.trim().replace(/^Dog\d+:\s*/i, '').trim();
       return parseAdicionaisSimples(partes);
@@ -708,7 +697,7 @@ let viewAtiva = "cardapio";
 let itensIndisponiveis = new Set(JSON.parse(localStorage.getItem('itensIndisponiveis') || '[]'));
 
 const WHATSAPP_NUMERO = '551993179455';
-const GS_URL = "https://script.google.com/macros/s/AKfycbxPPoNWoXY0KKuhXxjqzj_tjaSGa3R-U_fIzM2YdC4WI6581IUtGh3RzAPzYKCoUMet/exec";
+const GS_URL = "https://script.google.com/macros/s/AKfycbw-MjyvcVmZaD6CFYLK7BDymj_GPESPMiGsdNhj9KerDzWjAu6P5YXZHWCV85H7JOI/exec";
 
 document.addEventListener('DOMContentLoaded', () => {
   carregarEstado();
@@ -828,7 +817,6 @@ async function buscarFilaDaPlanilha() {
     filaGlobal.forEach(p => { statusLocal[p.id] = p.status; });
 
     filaGlobal = pedidos.map(p => {
-      // ─── CORRECAO: reconstruir itens com adicionais da coluna "adicionais" ───
       const itensArr  = (p.itens      || '').split(' | ').filter(Boolean);
       const addsArr   = (p.adicionais || '').split(' | ');
 
@@ -1179,9 +1167,7 @@ function gerarCodigoPedido() {
 }
 
 let tipoAtual = 'delivery';
-
-// ─── FRETE ───────────────────────────────────────────────────
-let freteMode = 'fixo';   // 'sem' | 'fixo' | 'custom'
+let freteMode = 'fixo';
 const FRETE_FIXO = 5;
 
 function selecionarFrete(mode) {
@@ -1264,11 +1250,9 @@ function confirmarPedido() {
   mostrarToast(`🎉 Pedido #${pedido.num} confirmado!`);
 }
 
-// ─── IMPRESSAO ───────────────────────────────────────────────
 function gerarImpressaoComanda(pedido) {
   const tipoLabel = { local:'Local', delivery:'Delivery', retirada:'Retirada' };
 
-  // Normaliza lista de adicionais para [{nome,qtd}]
   function normAdds(raw) {
     if (!raw || !Array.isArray(raw) || raw.length === 0) return [];
     const p = raw[0];
@@ -1612,7 +1596,7 @@ async function sincronizarEstoque() {
 }
 
 async function salvarEstoquePlanilha(nomeItem, disponivel) {
-  try { await jsonpGet(GS_URL + '?acao=setEstoque&token=' + encodeURIComponent(sessionToken||'') + '&nome=' + encodeURIComponent(nomeItem) + '&disponivel=' + disponivel); } catch(e) {}
+  try { await jsonpGet(GS_URL + '?acao=setestoque&token=' + encodeURIComponent(sessionToken||'') + '&nome=' + encodeURIComponent(nomeItem) + '&disponivel=' + disponivel); } catch(e) {}
 }
 
 function toggleDisponibilidade(nomeItem, disponivel) {
@@ -1640,7 +1624,6 @@ function atualizarResumoEstoque() {
   el.innerHTML = total === 0 ? 'Todos disponíveis ✅' : `<strong>${total}</strong> item(s) indisponivel(is) ⚠️`;
 }
 
-// ─── EDIÇÃO DE PEDIDO NA FILA ────────────────────────────────
 let editandoId = null;
 let editItens  = [];
 let editTipo   = 'local';
@@ -1650,10 +1633,9 @@ function abrirEdicao(id) {
   const p = filaGlobal.find(x => x.id === id);
   if (!p) return;
   editandoId = id;
-  editItens  = p.itens.map(i => ({ ...i }));   // cópia rasa
+  editItens  = p.itens.map(i => ({ ...i }));
   editTipo   = p.tipo   || 'local';
   editStatus = p.status || 'aguardando';
-
   document.getElementById('edit-sub').textContent = `Cliente: ${p.cliente} · ${p.hora}`;
   renderCorpoEdicao(p);
   document.getElementById('modal-edicao').classList.add('show');
@@ -1665,10 +1647,6 @@ function fecharEdicao() {
 }
 
 function renderCorpoEdicao(p) {
-  const tipoLabel   = { local:'🏠 Local', delivery:'🛵 Delivery', retirada:'🥡 Retirada' };
-  const statusLabel = { aguardando:'⏳ Aguardando', preparando:'🔥 Preparando', pronto:'✅ Pronto', entregue:'✔️ Entregue' };
-
-  // Itens
   const itensHtml = editItens.map((item, idx) => {
     let addsText = '';
     if (item.isCombo && Array.isArray(item.adicionais)) {
@@ -1698,13 +1676,10 @@ function renderCorpoEdicao(p) {
   }).join('');
 
   document.getElementById('edit-body').innerHTML = `
-    <!-- Cliente -->
     <div>
       <div class="edit-secao-label">👤 Cliente / Mesa</div>
       <input id="edit-cliente" class="edit-field" type="text" maxlength="30" value="${p.cliente || ''}">
     </div>
-
-    <!-- Tipo -->
     <div>
       <div class="edit-secao-label">📦 Tipo de Atendimento</div>
       <div class="edit-tipo-btns">
@@ -1713,20 +1688,14 @@ function renderCorpoEdicao(p) {
         <div class="edit-tipo-btn ${editTipo==='retirada'?'ativo':''}" onclick="editSelecionarTipo('retirada')"><span class="ei">🥡</span>Retirada</div>
       </div>
     </div>
-
-    <!-- Endereço (só delivery) -->
     <div id="edit-endereco-bloco" style="${editTipo==='delivery'?'':'display:none'}">
       <div class="edit-secao-label">📍 Endereço de Entrega</div>
       <input id="edit-endereco" class="edit-field" type="text" value="${p.endereco || ''}" placeholder="Rua, Nº — Bairro, Mogi Guacu">
     </div>
-
-    <!-- Pagamento -->
     <div>
       <div class="edit-secao-label">💳 Pagamento</div>
       <input id="edit-pagamento" class="edit-field" type="text" value="${p.pagamento || ''}" placeholder="Dinheiro, Cartao, PIX...">
     </div>
-
-    <!-- Status -->
     <div>
       <div class="edit-secao-label">🔄 Status</div>
       <div class="edit-status-btns">
@@ -1736,8 +1705,6 @@ function renderCorpoEdicao(p) {
         <div class="edit-status-btn ${editStatus==='entregue'?'ativo':''}"   onclick="editSelecionarStatus('entregue')">✔️ Entregue</div>
       </div>
     </div>
-
-    <!-- Itens -->
     <div>
       <div class="edit-secao-label">🌭 Itens do Pedido</div>
       <div id="edit-itens-lista" style="display:flex;flex-direction:column;gap:6px">
@@ -1769,8 +1736,6 @@ function editItemQtd(idx, delta) {
 
 function editItemDel(idx) {
   editItens.splice(idx, 1);
-  // Re-renderiza só a lista de itens
-  const p = filaGlobal.find(x => x.id === editandoId);
   const lista = document.getElementById('edit-itens-lista');
   if (!lista) return;
   lista.innerHTML = editItens.map((item, i) => {
@@ -1805,22 +1770,16 @@ function editItemDel(idx) {
 async function salvarEdicao() {
   const p = filaGlobal.find(x => x.id === editandoId);
   if (!p) return;
-
   const novoCliente   = document.getElementById('edit-cliente').value.trim()   || p.cliente;
   const novoEndereco  = document.getElementById('edit-endereco') ? document.getElementById('edit-endereco').value.trim() : p.endereco;
   const novoPagamento = document.getElementById('edit-pagamento').value.trim() || p.pagamento;
-
   if (editItens.length === 0) { mostrarToast('O pedido precisa ter ao menos 1 item!', 'erro'); return; }
-
-  // Recalcular total com base nos itens editados
   const novoTotal = editItens.reduce((s, i) => {
     let adds = 0;
     if (i.isCombo && Array.isArray(i.adicionais)) i.adicionais.forEach(dog => { if (Array.isArray(dog)) dog.forEach(a => { adds += a.qtd || 1; }); });
     else if (Array.isArray(i.adicionais)) i.adicionais.forEach(a => { adds += a.qtd || 1; });
     return s + (i.preco + adds * 7) * i.qtd;
   }, 0);
-
-  // Atualizar objeto local
   p.cliente   = novoCliente;
   p.tipo      = editTipo;
   p.endereco  = editTipo === 'delivery' ? (novoEndereco || p.endereco) : null;
@@ -1828,13 +1787,10 @@ async function salvarEdicao() {
   p.status    = editStatus;
   p.itens     = editItens;
   p.total     = novoTotal;
-
-  // Sync status na planilha se mudou
   const statusPlanilha = { aguardando:'Aguardando', preparando:'Preparando', pronto:'Pronto', entregue:'Entregue' };
   try {
-    await jsonpGet(GS_URL + '?acao=setStatus&id=' + encodeURIComponent(p.id) + '&status=' + encodeURIComponent(statusPlanilha[editStatus] || editStatus));
+    await jsonpGet(GS_URL + '?acao=setstatus&id=' + encodeURIComponent(p.id) + '&status=' + encodeURIComponent(statusPlanilha[editStatus] || editStatus));
   } catch(e) {}
-
   salvarEstado();
   atualizarHeaderStats();
   renderFilaLista();
