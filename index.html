@@ -307,6 +307,40 @@
   .adicional-chip.indisponivel-chip { opacity: 0.4; pointer-events: none; background: #f5f5f5; border-color: #ddd; cursor: not-allowed; }
   .item-card.indisponivel { opacity: 0.5; pointer-events: none; position: relative; }
   .item-card.indisponivel::after { content: 'INDISPONIVEL'; position: absolute; inset: 0; background: rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: #888; letter-spacing: 1px; border-radius: 10px; }
+
+  /* ── MODAL EDIÇÃO ── */
+  .edit-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1500; align-items: flex-end; justify-content: center; }
+  .edit-overlay.show { display: flex; }
+  .edit-box { background: var(--creme); border-radius: 18px 18px 0 0; width: 100%; max-height: 90dvh; display: flex; flex-direction: column; overflow: hidden; animation: slideUp 0.22s ease; }
+  .edit-header { background: linear-gradient(135deg, var(--vermelho-escuro), var(--vermelho)); padding: 14px 16px 12px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .edit-header-title { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 1.5px; color: var(--amarelo); line-height: 1; }
+  .edit-header-sub { font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+  .edit-close { background: rgba(255,255,255,0.15); border: none; color: white; font-size: 20px; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .edit-body { overflow-y: auto; padding: 14px; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+  .edit-secao-label { font-size: 10px; font-weight: 800; color: var(--cinza); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .edit-field { border: 1.5px solid var(--borda); border-radius: 8px; padding: 9px 12px; font-family: 'Nunito', sans-serif; font-size: 13px; background: white; color: var(--texto); width: 100%; }
+  .edit-field:focus { outline: none; border-color: var(--laranja); }
+  .edit-tipo-btns { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+  .edit-tipo-btn { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 4px; border: 2px solid var(--borda); border-radius: 10px; background: white; cursor: pointer; font-size: 10px; font-weight: 800; color: var(--cinza); -webkit-tap-highlight-color: transparent; }
+  .edit-tipo-btn .ei { font-size: 18px; }
+  .edit-tipo-btn.ativo { border-color: var(--laranja); background: #fff4e8; color: var(--vermelho); }
+  .edit-status-btns { display: grid; grid-template-columns: repeat(2,1fr); gap: 6px; }
+  .edit-status-btn { padding: 8px; border: 2px solid var(--borda); border-radius: 10px; background: white; font-family: 'Nunito', sans-serif; font-size: 11px; font-weight: 800; cursor: pointer; text-align: center; color: var(--cinza); -webkit-tap-highlight-color: transparent; }
+  .edit-status-btn.ativo { border-color: var(--laranja); background: #fff4e8; color: var(--vermelho); }
+  .edit-item-row { display: flex; align-items: center; gap: 8px; background: white; border: 1.5px solid var(--borda); border-radius: 10px; padding: 8px 10px; }
+  .edit-item-nome { flex: 1; font-size: 12px; font-weight: 700; color: var(--texto); line-height: 1.3; }
+  .edit-item-adds { font-size: 10px; color: var(--cinza); margin-top: 2px; }
+  .edit-item-ctrl { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  .edit-item-btn { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--borda); background: white; font-size: 15px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+  .edit-item-btn:active { background: var(--laranja); color: white; border-color: var(--laranja); }
+  .edit-item-qtd { font-weight: 800; font-size: 14px; min-width: 20px; text-align: center; }
+  .edit-item-del { background: none; border: none; color: #c0392b; font-size: 18px; cursor: pointer; opacity: 0.55; padding: 0; }
+  .edit-item-del:active { opacity: 1; }
+  .edit-footer { padding: 10px 14px 14px; background: var(--creme2); border-top: 1px solid var(--borda); display: flex; gap: 8px; flex-shrink: 0; }
+  .edit-btn-cancel { flex: 0 0 auto; padding: 12px 16px; border: 2px solid var(--borda); border-radius: 10px; background: white; color: var(--cinza); font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; }
+  .edit-btn-save { flex: 1; padding: 13px; border: none; border-radius: 10px; background: var(--verde); color: white; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 15px; cursor: pointer; }
+  .edit-btn-save:active { filter: brightness(0.9); }
+  .btn-editar-fila { background: #e8f0ff; color: #1a4dbf; max-width: 42px; }
 </style>
 </head>
 <body>
@@ -478,6 +512,26 @@
   </div>
 </div>
 
+<!-- MODAL EDIÇÃO DE PEDIDO -->
+<div class="edit-overlay" id="modal-edicao">
+  <div class="edit-box">
+    <div class="edit-header">
+      <div>
+        <div class="edit-header-title">✏️ Editar Pedido</div>
+        <div class="edit-header-sub" id="edit-sub">Pedido #000</div>
+      </div>
+      <button class="edit-close" onclick="fecharEdicao()">✕</button>
+    </div>
+    <div class="edit-body" id="edit-body">
+      <!-- preenchido dinamicamente -->
+    </div>
+    <div class="edit-footer">
+      <button class="edit-btn-cancel" onclick="fecharEdicao()">Cancelar</button>
+      <button class="edit-btn-save" onclick="salvarEdicao()">✅ Salvar Alterações</button>
+    </div>
+  </div>
+</div>
+
 <nav class="bottom-nav">
   <div class="nav-tab ativo" id="tab-cardapio" onclick="trocarView('cardapio')"><span class="nav-icon">🌭</span>Cardapio</div>
   <div class="nav-tab" id="tab-pedido" onclick="trocarView('pedido')"><span class="nav-icon">🛒</span><span class="cart-count-badge" id="cart-badge"></span>Pedido</div>
@@ -601,7 +655,7 @@ let viewAtiva = "cardapio";
 let itensIndisponiveis = new Set(JSON.parse(localStorage.getItem('itensIndisponiveis') || '[]'));
 
 const WHATSAPP_NUMERO = '551993179455';
-const GS_URL = "https://script.google.com/macros/s/AKfycbytWm9hdqO95KoVBpWXlgXbd8YLqEhugpk_WQGTqhYHvNJeeroygsmjx9ggJ9vf3s-e/exec";
+const GS_URL = "https://script.google.com/macros/s/AKfycbxPPoNWoXY0KKuhXxjqzj_tjaSGa3R-U_fIzM2YdC4WI6581IUtGh3RzAPzYKCoUMet/exec";
 
 document.addEventListener('DOMContentLoaded', () => {
   carregarEstado();
@@ -1266,6 +1320,7 @@ function renderFilaLista() {
       <div class="fila-card-total">Total: R$ ${parseFloat(p.total).toFixed(2).replace('.',',')}</div>
       <div class="fila-card-btns">
         ${proxLabel[status] ? `<button class="btn-status-next" onclick="avancarStatus('${p.id}')">→ ${proxLabel[status]}</button>` : '<span style="flex:1"></span>'}
+        <button class="btn-editar-fila" onclick="abrirEdicao('${p.id}')">✏️</button>
         <button class="btn-impr-fila" onclick="imprimirFilaPedido('${p.id}')">🖨️</button>
         <button class="btn-del-fila" onclick="removerFila('${p.id}')">✕</button>
       </div>`;
@@ -1484,6 +1539,208 @@ function atualizarResumoEstoque() {
   const el = document.getElementById('estoque-resumo');
   if (!el) return;
   el.innerHTML = total === 0 ? 'Todos disponíveis ✅' : `<strong>${total}</strong> item(s) indisponivel(is) ⚠️`;
+}
+
+// ─── EDIÇÃO DE PEDIDO NA FILA ────────────────────────────────
+let editandoId = null;
+let editItens  = [];
+let editTipo   = 'local';
+let editStatus = 'aguardando';
+
+function abrirEdicao(id) {
+  const p = filaGlobal.find(x => x.id === id);
+  if (!p) return;
+  editandoId = id;
+  editItens  = p.itens.map(i => ({ ...i }));   // cópia rasa
+  editTipo   = p.tipo   || 'local';
+  editStatus = p.status || 'aguardando';
+
+  document.getElementById('edit-sub').textContent = `Cliente: ${p.cliente} · ${p.hora}`;
+  renderCorpoEdicao(p);
+  document.getElementById('modal-edicao').classList.add('show');
+}
+
+function fecharEdicao() {
+  document.getElementById('modal-edicao').classList.remove('show');
+  editandoId = null; editItens = [];
+}
+
+function renderCorpoEdicao(p) {
+  const tipoLabel   = { local:'🏠 Local', delivery:'🛵 Delivery', retirada:'🥡 Retirada' };
+  const statusLabel = { aguardando:'⏳ Aguardando', preparando:'🔥 Preparando', pronto:'✅ Pronto', entregue:'✔️ Entregue' };
+
+  // Itens
+  const itensHtml = editItens.map((item, idx) => {
+    let addsText = '';
+    if (item.isCombo && Array.isArray(item.adicionais)) {
+      addsText = item.adicionais.map((dog, di) => {
+        const s = item.sabores && item.sabores[di] ? item.sabores[di] : '';
+        const a = Array.isArray(dog) && dog.length > 0 ? dog.map(x => x.nome).join(', ') : '';
+        const partes = [s, a].filter(Boolean).join(' · ');
+        return partes ? `Dog${di+1}: ${partes}` : '';
+      }).filter(Boolean).join(' | ');
+    } else if (Array.isArray(item.adicionais) && item.adicionais.length > 0) {
+      addsText = '+ ' + item.adicionais.map(a => a.nome).join(', ');
+    }
+    return `
+      <div class="edit-item-row" id="edit-item-row-${idx}">
+        <div style="flex:1">
+          <div class="edit-item-nome">${item.nome}</div>
+          ${addsText ? `<div class="edit-item-adds">${addsText}</div>` : ''}
+          ${item.obs ? `<div class="edit-item-adds">📝 ${item.obs}</div>` : ''}
+        </div>
+        <div class="edit-item-ctrl">
+          <button class="edit-item-btn" onclick="editItemQtd(${idx},-1)">−</button>
+          <span class="edit-item-qtd" id="edit-iqtd-${idx}">${item.qtd}</span>
+          <button class="edit-item-btn" onclick="editItemQtd(${idx},1)">+</button>
+          <button class="edit-item-del" onclick="editItemDel(${idx})">✕</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('edit-body').innerHTML = `
+    <!-- Cliente -->
+    <div>
+      <div class="edit-secao-label">👤 Cliente / Mesa</div>
+      <input id="edit-cliente" class="edit-field" type="text" maxlength="30" value="${p.cliente || ''}">
+    </div>
+
+    <!-- Tipo -->
+    <div>
+      <div class="edit-secao-label">📦 Tipo de Atendimento</div>
+      <div class="edit-tipo-btns">
+        <div class="edit-tipo-btn ${editTipo==='local'?'ativo':''}" onclick="editSelecionarTipo('local')"><span class="ei">🏠</span>Local</div>
+        <div class="edit-tipo-btn ${editTipo==='delivery'?'ativo':''}" onclick="editSelecionarTipo('delivery')"><span class="ei">🛵</span>Entrega</div>
+        <div class="edit-tipo-btn ${editTipo==='retirada'?'ativo':''}" onclick="editSelecionarTipo('retirada')"><span class="ei">🥡</span>Retirada</div>
+      </div>
+    </div>
+
+    <!-- Endereço (só delivery) -->
+    <div id="edit-endereco-bloco" style="${editTipo==='delivery'?'':'display:none'}">
+      <div class="edit-secao-label">📍 Endereço de Entrega</div>
+      <input id="edit-endereco" class="edit-field" type="text" value="${p.endereco || ''}" placeholder="Rua, Nº — Bairro, Mogi Guacu">
+    </div>
+
+    <!-- Pagamento -->
+    <div>
+      <div class="edit-secao-label">💳 Pagamento</div>
+      <input id="edit-pagamento" class="edit-field" type="text" value="${p.pagamento || ''}" placeholder="Dinheiro, Cartao, PIX...">
+    </div>
+
+    <!-- Status -->
+    <div>
+      <div class="edit-secao-label">🔄 Status</div>
+      <div class="edit-status-btns">
+        <div class="edit-status-btn ${editStatus==='aguardando'?'ativo':''}" onclick="editSelecionarStatus('aguardando')">⏳ Aguardando</div>
+        <div class="edit-status-btn ${editStatus==='preparando'?'ativo':''}" onclick="editSelecionarStatus('preparando')">🔥 Preparando</div>
+        <div class="edit-status-btn ${editStatus==='pronto'?'ativo':''}"     onclick="editSelecionarStatus('pronto')">✅ Pronto</div>
+        <div class="edit-status-btn ${editStatus==='entregue'?'ativo':''}"   onclick="editSelecionarStatus('entregue')">✔️ Entregue</div>
+      </div>
+    </div>
+
+    <!-- Itens -->
+    <div>
+      <div class="edit-secao-label">🌭 Itens do Pedido</div>
+      <div id="edit-itens-lista" style="display:flex;flex-direction:column;gap:6px">
+        ${itensHtml || '<div style="font-size:12px;color:var(--cinza);padding:6px 0">Nenhum item</div>'}
+      </div>
+    </div>`;
+}
+
+function editSelecionarTipo(tipo) {
+  editTipo = tipo;
+  document.querySelectorAll('.edit-tipo-btn').forEach(b => b.classList.remove('ativo'));
+  event.currentTarget.classList.add('ativo');
+  document.getElementById('edit-endereco-bloco').style.display = tipo === 'delivery' ? '' : 'none';
+}
+
+function editSelecionarStatus(status) {
+  editStatus = status;
+  document.querySelectorAll('.edit-status-btn').forEach(b => b.classList.remove('ativo'));
+  event.currentTarget.classList.add('ativo');
+}
+
+function editItemQtd(idx, delta) {
+  const nova = (editItens[idx].qtd || 1) + delta;
+  if (nova < 1) return editItemDel(idx);
+  editItens[idx].qtd = nova;
+  const el = document.getElementById('edit-iqtd-' + idx);
+  if (el) el.textContent = nova;
+}
+
+function editItemDel(idx) {
+  editItens.splice(idx, 1);
+  // Re-renderiza só a lista de itens
+  const p = filaGlobal.find(x => x.id === editandoId);
+  const lista = document.getElementById('edit-itens-lista');
+  if (!lista) return;
+  lista.innerHTML = editItens.map((item, i) => {
+    let addsText = '';
+    if (item.isCombo && Array.isArray(item.adicionais)) {
+      addsText = item.adicionais.map((dog, di) => {
+        const s = item.sabores && item.sabores[di] ? item.sabores[di] : '';
+        const a = Array.isArray(dog) && dog.length > 0 ? dog.map(x => x.nome).join(', ') : '';
+        const partes = [s, a].filter(Boolean).join(' · ');
+        return partes ? `Dog${di+1}: ${partes}` : '';
+      }).filter(Boolean).join(' | ');
+    } else if (Array.isArray(item.adicionais) && item.adicionais.length > 0) {
+      addsText = '+ ' + item.adicionais.map(a => a.nome).join(', ');
+    }
+    return `
+      <div class="edit-item-row">
+        <div style="flex:1">
+          <div class="edit-item-nome">${item.nome}</div>
+          ${addsText ? `<div class="edit-item-adds">${addsText}</div>` : ''}
+          ${item.obs ? `<div class="edit-item-adds">📝 ${item.obs}</div>` : ''}
+        </div>
+        <div class="edit-item-ctrl">
+          <button class="edit-item-btn" onclick="editItemQtd(${i},-1)">−</button>
+          <span class="edit-item-qtd" id="edit-iqtd-${i}">${item.qtd}</span>
+          <button class="edit-item-btn" onclick="editItemQtd(${i},1)">+</button>
+          <button class="edit-item-del" onclick="editItemDel(${i})">✕</button>
+        </div>
+      </div>`;
+  }).join('') || '<div style="font-size:12px;color:var(--cinza);padding:6px 0">Nenhum item</div>';
+}
+
+async function salvarEdicao() {
+  const p = filaGlobal.find(x => x.id === editandoId);
+  if (!p) return;
+
+  const novoCliente   = document.getElementById('edit-cliente').value.trim()   || p.cliente;
+  const novoEndereco  = document.getElementById('edit-endereco') ? document.getElementById('edit-endereco').value.trim() : p.endereco;
+  const novoPagamento = document.getElementById('edit-pagamento').value.trim() || p.pagamento;
+
+  if (editItens.length === 0) { mostrarToast('O pedido precisa ter ao menos 1 item!', 'erro'); return; }
+
+  // Recalcular total com base nos itens editados
+  const novoTotal = editItens.reduce((s, i) => {
+    let adds = 0;
+    if (i.isCombo && Array.isArray(i.adicionais)) i.adicionais.forEach(dog => { if (Array.isArray(dog)) dog.forEach(a => { adds += a.qtd || 1; }); });
+    else if (Array.isArray(i.adicionais)) i.adicionais.forEach(a => { adds += a.qtd || 1; });
+    return s + (i.preco + adds * 7) * i.qtd;
+  }, 0);
+
+  // Atualizar objeto local
+  p.cliente   = novoCliente;
+  p.tipo      = editTipo;
+  p.endereco  = editTipo === 'delivery' ? (novoEndereco || p.endereco) : null;
+  p.pagamento = novoPagamento;
+  p.status    = editStatus;
+  p.itens     = editItens;
+  p.total     = novoTotal;
+
+  // Sync status na planilha se mudou
+  const statusPlanilha = { aguardando:'Aguardando', preparando:'Preparando', pronto:'Pronto', entregue:'Entregue' };
+  try {
+    await jsonpGet(GS_URL + '?acao=setStatus&id=' + encodeURIComponent(p.id) + '&status=' + encodeURIComponent(statusPlanilha[editStatus] || editStatus));
+  } catch(e) {}
+
+  salvarEstado();
+  atualizarHeaderStats();
+  renderFilaLista();
+  fecharEdicao();
+  mostrarToast('✅ Pedido atualizado!');
 }
 
 function renderEstoque() {
