@@ -271,7 +271,7 @@
   .btn-imprimir-rel { width: 100%; padding: 12px; background: var(--verde); color: white; border: none; border-radius: 10px; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 14px; cursor: pointer; margin-top: 10px; }
 
   .bottom-nav { height: var(--tab-height); background: white; border-top: 1.5px solid var(--borda); display: flex; flex-shrink: 0; box-shadow: 0 -2px 12px rgba(0,0,0,0.08); }
-  .nav-tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; font-size: 10px; font-weight: 700; color: var(--cinza); transition: all 0.15s; position: relative; user-select: none; -webkit-tap-highlight-color: transparent; }
+  .nav-tab { flex: 1; min-width: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; font-size: 10px; font-weight: 700; color: var(--cinza); transition: all 0.15s; position: relative; user-select: none; -webkit-tap-highlight-color: transparent; white-space: nowrap; }
   .nav-tab.ativo { color: var(--vermelho); }
   .nav-tab .nav-icon { font-size: 22px; line-height: 1; transition: transform 0.15s; }
   .nav-tab.ativo .nav-icon { transform: scale(1.15); }
@@ -1589,11 +1589,12 @@ async function pedirSenhaAdmin() {
     const res = await jsonpGet(GS_URL + '?acao=login&senha=' + encodeURIComponent(senha));
     if (res && res.ok && res.token) {
       sessionToken = res.token;
-      document.getElementById('tab-fila').style.display = 'flex';
-      document.getElementById('tab-relatorio').style.display = 'flex';
-      document.getElementById('tab-estoque').style.display = 'flex';
-      trocarView('fila'); mostrarToast('✅ Admin liberado — sincronizando fila...');
+      document.getElementById('tab-fila').style.removeProperty('display');
+      document.getElementById('tab-relatorio').style.removeProperty('display');
+      document.getElementById('tab-estoque').style.removeProperty('display');
       iniciarSyncAdmin();
+      trocarView('fila');
+      mostrarToast('✅ Admin liberado — sincronizando fila...');
     } else { mostrarToast('Senha incorreta','erro'); }
   } catch(e) { mostrarToast('Erro ao verificar senha','erro'); }
 }
