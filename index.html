@@ -575,7 +575,7 @@
 <nav class="bottom-nav">
   <div class="nav-tab ativo" id="tab-cardapio" onclick="trocarView('cardapio')"><span class="nav-icon">🌭</span>Cardapio</div>
   <div class="nav-tab" id="tab-pedido" onclick="trocarView('pedido')"><span class="nav-icon">🛒</span><span class="cart-count-badge" id="cart-badge"></span>Pedido</div>
-  <div class="nav-tab" id="tab-fila" style="display:none" onclick="carregarEstado(); trocarView('fila'); imprimirPedidosPendentes()"><span class="nav-icon">📋</span><span class="nav-badge" id="fila-badge"></span>Fila</div>
+  <div class="nav-tab" id="tab-fila" style="display:none" onclick="trocarView('fila'); buscarFilaDaPlanilha()"><span class="nav-icon">📋</span><span class="nav-badge" id="fila-badge"></span>Fila</div>
   <div class="nav-tab" id="tab-relatorio" onclick="trocarView('relatorio')" style="display:none"><span class="nav-icon">📊</span>Relatorio</div>
   <div class="nav-tab" id="tab-estoque" onclick="trocarView('estoque'); renderEstoque()" style="display:none"><span class="nav-icon">📦</span>Estoque</div>
 </nav>
@@ -632,6 +632,19 @@ const adicionais = ["+1 salsicha", "4 queijos", "Alho Frito", "Bacon", "Barbecue
 function horaAgora() {
   const d = new Date();
   return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+
+// Garante que qualquer string de hora vinda da planilha fique só "HH:mm"
+// Ex: "21:30:00", "21:30 BRT", "Sat Dec 30 21:30:00 GMT-0300 1899" → "21:30"
+function sanitizarHora(raw) {
+  if (!raw) return '';
+  const s = String(raw).trim();
+  // Formato ideal: já é HH:mm
+  if (/^\d{2}:\d{2}$/.test(s)) return s;
+  // Tem HH:mm em algum lugar da string
+  const m = s.match(/(\d{1,2}):(\d{2})/);
+  if (m) return String(m[1]).padStart(2,'0') + ':' + m[2];
+  return s;
 }
 
 // ─── PARSER DE ADICIONAIS DA PLANILHA ───────────────────────
@@ -695,7 +708,7 @@ let viewAtiva = "cardapio";
 let itensIndisponiveis = new Set(JSON.parse(localStorage.getItem('itensIndisponiveis') || '[]'));
 
 const WHATSAPP_NUMERO = '551993179455';
-const GS_URL = "https://script.google.com/macros/s/AKfycby6HCmYRR5jCRzscPxjuW8OsCcLCgVmALK92LoELt4KrI8XZCYkFBYf9s8UchQff4cU/exec";
+const GS_URL = "https://script.google.com/macros/s/AKfycbxPPoNWoXY0KKuhXxjqzj_tjaSGa3R-U_fIzM2YdC4WI6581IUtGh3RzAPzYKCoUMet/exec";
 
 document.addEventListener('DOMContentLoaded', () => {
   carregarEstado();
@@ -837,8 +850,9 @@ async function buscarFilaDaPlanilha() {
         endereco:  p.endereco || null,
         previsao:  null,
         itens,
+        frete:     parseFloat(p.frete) || 0,
         total:     parseFloat(p.total) || 0,
-        hora:      p.hora || '',   // já vem formatado "HH:mm" pelo GAS corrigido
+        hora:      sanitizarHora(p.hora),
         status:    statusLocal[p.id] || normStatus(p.status),
         data:      hoje(),
         pagamento: p.pagamento || ''
