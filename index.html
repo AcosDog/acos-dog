@@ -1252,47 +1252,66 @@ function confirmarPedido() {
 
 function gerarImpressaoComanda(pedido) {
   const tipoLabel = { local:'Local', delivery:'Delivery', retirada:'Retirada' };
-
+ 
+  // Normaliza qualquer formato de adicionais para [{nome, qtd}]
+  // Cobre: [{nome,qtd}], ['string'], array de arrays (combo aninhado), null/undefined
   function normAdds(raw) {
     if (!raw || !Array.isArray(raw) || raw.length === 0) return [];
-    const p = raw[0];
-    if (!p) return [];
-    if (typeof p === 'object' && typeof p.nome === 'string') return raw;
-    if (typeof p === 'string') return raw.map(s => ({ nome: s, qtd: 1 }));
+    const primeiro = raw[0];
+    if (primeiro === null || primeiro === undefined) return [];
+    // Ja e [{nome, qtd}]
+    if (typeof primeiro === 'object' && !Array.isArray(primeiro) && typeof primeiro.nome === 'string') return raw;
+    // Array de strings simples
+    if (typeof primeiro === 'string') return raw.map(s => ({ nome: s, qtd: 1 }));
+    // Array de arrays (combo passado errado) — achata o primeiro nivel
+    if (Array.isArray(primeiro)) return primeiro.filter(a => a && a.nome).map(a => ({ nome: a.nome, qtd: a.qtd || 1 }));
     return [];
   }
-
+ 
   function fmtAdds(lista) {
     try {
-      const n = normAdds(lista);
-      return n.length === 0 ? '' : n.map(a => (a.qtd > 1 ? a.qtd+'x ' : '') + a.nome).join(', ');
+      const n = normAdds(Array.isArray(lista) ? lista : []);
+      if (n.length === 0) return '';
+      return n.map(a => (a.qtd > 1 ? a.qtd + 'x ' : '') + a.nome).join(', ');
     } catch(e) { return ''; }
   }
-
+ 
   const linhaItens = pedido.itens.map(i => {
-    let html = `<div class="p-row"><span>${i.qtd}x ${i.nome}</span><span>R$${(i.preco*i.qtd).toFixed(2)}</span></div>`;
-    if (i.obs) html += `<div style="font-size:12px;padding-left:12px">  Obs: ${i.obs}</div>`;
+    // Calcula preco correto incluindo adicionais
+    let qtdAdds = 0;
     if (i.isCombo && Array.isArray(i.adicionais)) {
+      i.adicionais.forEach(dog => { if (Array.isArray(dog)) dog.forEach(a => { qtdAdds += a.qtd || 1; }); });
+    } else if (Array.isArray(i.adicionais)) {
+      i.adicionais.forEach(a => { qtdAdds += a.qtd || 1; });
+    }
+    const precoTotal = ((i.preco || 0) + qtdAdds * 7) * (i.qtd || 1);
+    let html = `<div class="p-row"><span>${i.qtd}x ${i.nome}</span><span>R$${precoTotal.toFixed(2)}</span></div>`;
+ 
+    if (i.isCombo && Array.isArray(i.adicionais)) {
+      // Combo: cada dog tem seus adicionais e obs separados
       i.adicionais.forEach((dog, di) => {
         const s = i.sabores && i.sabores[di] ? i.sabores[di] : '';
-        const a = fmtAdds(dog);
-        const o = i.obsPerDog && i.obsPerDog[di] ? i.obsPerDog[di] : '';
-        const partes = [s, a ? '+ '+a : '', o].filter(Boolean).join(' / ');
+        const a = fmtAdds(Array.isArray(dog) ? dog : []);
+        const o = (i.obsPerDog && Array.isArray(i.obsPerDog) && i.obsPerDog[di]) ? i.obsPerDog[di].trim() : '';
+        const partes = [s, a ? '+ ' + a : '', o ? 'Obs: ' + o : ''].filter(Boolean).join(' / ');
         if (partes) html += `<div style="font-size:12px;padding-left:12px">  Dog${di+1}: ${partes}</div>`;
       });
     } else {
+      // Item simples: adicionais + obs
       const adds = fmtAdds(i.adicionais);
       if (adds) html += `<div style="font-size:12px;padding-left:12px">  + ${adds}</div>`;
+      // CORRECAO: obs agora sempre imprime (antes tinha bug que ignorava)
+      if (i.obs && String(i.obs).trim()) html += `<div style="font-size:12px;padding-left:12px">  Obs: ${i.obs}</div>`;
     }
     return html;
   }).join('');
-
+ 
   const endHtml = pedido.endereco ? `
     <div class="p-linha"></div>
     <div class="p-bold">ENTREGA:</div>
     <div style="word-break:break-word">${pedido.endereco}</div>
     ${pedido.previsao ? `<div class="p-row"><span>Previsao:</span><span>${pedido.previsao}</span></div>` : ''}` : '';
-
+ 
   document.getElementById('print-area').innerHTML = `
     <div class="p-center p-bold" style="font-size:20px;letter-spacing:3px">ACO'S DOG</div>
     <div class="p-center" style="font-size:12px">Do Tradicional ao Sem Igual</div>
@@ -1307,7 +1326,7 @@ function gerarImpressaoComanda(pedido) {
     <div class="p-bold" style="margin-bottom:4px">ITENS:</div>
     ${linhaItens}
     <div class="p-linha"></div>
-    ${pedido.frete > 0 ? `<div class="p-row"><span>🛵 Frete:</span><span>R$ ${pedido.frete.toFixed(2)}</span></div>` : ''}
+    ${pedido.frete > 0 ? `<div class="p-row"><span>Frete:</span><span>R$ ${pedido.frete.toFixed(2)}</span></div>` : ''}
     <div class="p-row p-bold" style="font-size:16px"><span>TOTAL:</span><span>R$ ${pedido.total.toFixed(2)}</span></div>
     <div class="p-linha"></div>
     <div class="p-center" style="font-size:12px;margin-top:4px">Obrigado pela preferencia!</div>
