@@ -769,6 +769,8 @@ function salvarEstado() {
 
 async function enviarPedidoParaPlanilha(pedido) {
   const itensTexto = pedido.itens.map(i => `${i.qtd}x ${i.nome}`).join(' | ');
+ 
+  // Monta texto dos adicionais por item
   const addTexto = pedido.itens.map(i => {
     if (!i.adicionais || i.adicionais.length === 0) return '';
     if (i.isCombo && Array.isArray(i.adicionais)) {
@@ -780,14 +782,37 @@ async function enviarPedidoParaPlanilha(pedido) {
     }
     return i.adicionais.filter(a => a && a.nome).map(a => (a.qtd > 1 ? a.qtd+'x ':'')+a.nome).join(', ');
   }).filter(Boolean).join(' | ');
-
+ 
+  // ✅ NOVO: monta texto das observações por item
+  const obsTexto = pedido.itens.map(i => {
+    if (i.isCombo) {
+      // Combo: obs de cada dog separadas
+      if (i.obsPerDog && Array.isArray(i.obsPerDog)) {
+        const obsDogs = i.obsPerDog.map((o, di) => o && o.trim() ? `Dog${di+1}: ${o.trim()}` : '').filter(Boolean).join(' / ');
+        return obsDogs || '';
+      }
+      return '';
+    }
+    // Item simples
+    return i.obs && i.obs.trim() ? i.obs.trim() : '';
+  }).filter(Boolean).join(' | ');
+ 
   try {
     await fetch(GS_URL, {
       method: 'POST', mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: pedido.id, hora: pedido.hora, cliente: pedido.cliente,
-        tipo: pedido.tipo, endereco: pedido.endereco || '', itens: itensTexto,
-        adicionais: addTexto, pagamento: pedido.pagamento || '', total: pedido.total })
+      body: JSON.stringify({
+        id:         pedido.id,
+        hora:       pedido.hora,
+        cliente:    pedido.cliente,
+        tipo:       pedido.tipo,
+        endereco:   pedido.endereco  || '',
+        itens:      itensTexto,
+        adicionais: addTexto,
+        obs:        obsTexto,          // ← NOVO campo
+        pagamento:  pedido.pagamento || '',
+        total:      pedido.total
+      })
     });
   } catch(e) {}
 }
@@ -828,6 +853,16 @@ async function buscarFilaDaPlanilha() {
         item.adicionais = parsed;
         item.isCombo    = parsed.length > 0 && Array.isArray(parsed[0]);
         return item;
+      });
+
+      const obsArr = (p.obs || '').split(' | ');
+      itens.forEach((item, idx) => {
+        const obsRaw = obsArr[idx] || '';
+        if (item.isCombo) {
+          item.obsPerDog = obsRaw.split('/').map(s => s.trim().replace(/^Dog\d+:\s*/i, '').trim());
+        } else {
+          item.obs = obsRaw;
+        }
       });
 
       return {
